@@ -4,7 +4,6 @@ dotenv.config();
 
 interface ENV {
   PORT: number | undefined,
-  DB_TYPE: string | undefined,
   DB_HOST: string | undefined,
   DB_PORT: number | undefined,
   DB_USER: string | undefined,
@@ -21,7 +20,6 @@ export type Config = Required<ENV>;
 const get_config = (): ENV => {
   return {
     PORT: process.env.PORT ? Number(process.env.PORT) : undefined,
-    DB_TYPE: process.env.DB_TYPE,
     DB_HOST: process.env.DB_HOST,
     DB_PORT: process.env.DB_PORT ? Number(process.env.DB_PORT) : undefined,
     DB_USER: process.env.DB_USER,
