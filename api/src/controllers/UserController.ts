@@ -310,7 +310,54 @@ export default class UserController implements Controller {
     }
   }
 
-  public delete: RequestHandler = (_, __) => {
-    return;
+  /**
+   * Удаляет данные пользователя
+   * @params request
+   * @params response
+   */
+  public delete: RequestHandler = async (request, response) => {
+    console.log(`[${new Date().toLocaleString()}]: DELETE ${get_full_url(request)}`);
+
+    const user_id = parseInt(request.params.id as string);
+
+    if (!user_id) {
+      response.status(400);
+
+      response.json({
+        errors: ["Некорректный идентификатор пользователя!"],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор пользователя!`);
+      return;
+    }
+
+    try {
+      const delete_result = await this._repository.delete(user_id);
+
+      if (delete_result.affected === 0) {
+        response.status(404);
+
+        response.json({
+          errors: [`Пользователь с id = ${user_id} не найден!`],
+        });
+
+        console.error(`[ERROR ${new Date().toLocaleString()}]: Пользователь с id = ${user_id} не найден!`);
+        return;
+      }
+
+      response.status(200);
+      response.json(delete_result);
+
+      console.log(`[${new Date().toLocaleString()}]: Удаление пользователя с id = ${user_id} прошло успешно!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 }
