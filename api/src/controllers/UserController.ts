@@ -236,8 +236,78 @@ export default class UserController implements Controller {
     }
   }
 
-  public update: RequestHandler = (_, __) => {
-    return;
+  /**
+   * Обновляет данные указанного пользователя
+   * @params request
+   * @params response
+   */
+  public update: RequestHandler = async (request, response) => {
+    console.log(`[${new Date().toLocaleString()}]: PUT ${get_full_url(request)}`);
+
+    const user_id = parseInt(request.params.id as string);
+
+    if (!user_id) {
+      response.status(400);
+
+      response.json({
+        errors: ["Некорректный идентификатор пользователя!"],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор пользователя!`);
+      return;
+    }
+
+    // проверка на существование пользователя
+    const existing_user = await this._repository.findOne({
+      select: { user_id: true },
+      where: { user_id: user_id },
+    });
+
+    if (!existing_user) {
+      response.status(404);
+
+      response.json({
+        errors: [`Пользователь с id = ${user_id} не найден!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Пользователь с id = ${user_id} не найден!`);
+      return;
+    }
+
+    const user: User = new User();
+    user.user_id = user_id;
+
+    // сбор полей для обновления
+    if (request.body.firstname && request.body.firstname.length !== 0) {
+      user.firstname = request.body.firstname;
+    }
+    if (request.body.lastname && request.body.lastname.length !== 0) {
+      user.lastname = request.body.lastname;
+    }
+    if (request.body.username && request.body.username.length !== 0) {
+      user.username = request.body.username;
+    }
+    if (request.body.email && request.body.email.length !== 0) {
+      user.email = request.body.email;
+    }
+
+    try {
+      const updated_user = await this._repository.save(user);
+
+      response.status(200);
+      response.json(updated_user);
+
+      console.log(`[${new Date().toLocaleString()}]: Обновление данных пользователя с id = ${user_id} прошло успешно!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   public delete: RequestHandler = (_, __) => {
