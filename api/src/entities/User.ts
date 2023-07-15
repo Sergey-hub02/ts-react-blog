@@ -34,7 +34,7 @@ export default class User {
 
   @ManyToMany(() => Role)
   @JoinTable()
-  public role: Role[];
+  public roles: Role[];
 
   @CreateDateColumn()
   public created_at: Date;
