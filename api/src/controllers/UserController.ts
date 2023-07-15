@@ -163,8 +163,77 @@ export default class UserController implements Controller {
     }
   }
 
-  public get_one: RequestHandler = (_, __) => {
-    return;
+  /**
+   * Возвращает данные указанного пользователя
+   * @params request
+   * @params response
+   */
+  public get_one: RequestHandler = async (request, response) => {
+    console.log(`[${new Date().toLocaleString()}]: GET ${get_full_url(request)}`);
+
+    const user_id = parseInt(request.params.id as string);
+
+    if (!user_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор пользователя!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор пользователя!`);
+      return;
+    }
+
+    try {
+      const user = await this._repository.findOne({
+        select: {
+          user_id: true,
+          firstname: true,
+          lastname: true,
+          username: true,
+          email: true,
+          password: true,
+          roles: {
+            role_id: true,
+            name: true,
+            description: true,
+          },
+          created_at: true,
+          updated_at: true,
+        },
+        where: {
+          user_id: user_id,
+        },
+        relations: {
+          roles: true,
+        },
+      });
+
+      if (!user) {
+        response.status(404);
+
+        response.json({
+          errors: [`Пользователь с id = ${user_id} не найден!`],
+        });
+
+        console.error(`[ERROR ${new Date().toLocaleString()}]: Пользователь с id = ${user_id} не найден!`);
+        return;
+      }
+
+      response.status(200);
+      response.json(user);
+
+      console.log(`[${new Date().toLocaleString()}]: Данные пользователя с id = ${user_id} получены!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   public update: RequestHandler = (_, __) => {
