@@ -10,7 +10,7 @@ import argon2 from "argon2";
  * Обрабатывает все запросы, связанные с сущностью User
  */
 export default class UserController implements Controller {
-  // private _limit: number = 15;
+  private _limit: number = 5;
   private _repository: Repository<User>;
 
   /**
@@ -109,8 +109,58 @@ export default class UserController implements Controller {
     }
   }
 
-  public get: RequestHandler = (_, __) => {
-    return;
+  /**
+   * Возвращает список пользователей с возможностью пагинации
+   * @params request
+   * @params response
+   */
+  public get: RequestHandler = async (request, response) => {
+    console.log(`[${new Date().toLocaleString()}]: GET ${get_full_url(request)}`);
+
+    let query: any = {
+      select: {
+        user_id: true,
+        firstname: true,
+        lastname: true,
+        username: true,
+        email: true,
+        roles: {
+          role_id: true,
+          name: true,
+          description: true,
+        },
+        created_at: true,
+        updated_at: true,
+      },
+      relations: {
+        roles: true,
+      },
+    };
+
+    const page = parseInt(request.query.page as string);
+
+    if (page && page > 0) {
+      query.take = this._limit;
+      query.skip = this._limit * (page - 1);
+    }
+
+    try {
+      const users: User[] = await this._repository.find(query);
+
+      response.status(200);
+      response.json(users);
+
+      console.log(`[${new Date().toLocaleString()}]: Данные пользователей были получены!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}!`);
+    }
   }
 
   public get_one: RequestHandler = (_, __) => {
