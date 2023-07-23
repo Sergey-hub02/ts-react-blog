@@ -182,8 +182,99 @@ export default class PostController implements Controller {
     }
   }
 
-  public get_one: RequestHandler = async (request, __) => {
+  /**
+   * Возвращает данные указанной публикации
+   * @params request
+   * @params response
+   */
+  public get_one: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: GET ${get_full_url(request)}`);
+
+    const post_id = parseInt(request.params.id as string);
+
+    if (!post_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор публикации!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор публикации!`);
+      return;
+    }
+
+    try {
+      const post = await this._repository.findOne({
+        select: {
+          post_id: true,
+          title: true,
+          content: true,
+          author: {
+            user_id: true,
+            username: true,
+            email: true,
+          },
+          categories: {
+            category_id: true,
+            name: true,
+          },
+          comments: {
+            comment_id: true,
+            content: true,
+            author: {
+              user_id: true,
+              username: true,
+              email: true,
+            },
+            created_at: true,
+            updated_at: true,
+          },
+          state: {
+            state_id: true,
+            name: true,
+          },
+          views: true,
+          created_at: true,
+          updated_at: true,
+        },
+        where: {
+          post_id: post_id,
+        },
+        relations: {
+          author: true,
+          categories: true,
+          comments: {
+            author: true,
+          },
+          state: true,
+        },
+      });
+
+      if (!post) {
+        response.status(404);
+
+        response.json({
+          errors: [`Публикация с id = ${post_id} не найдена!`],
+        });
+
+        console.error(`[ERROR ${new Date().toLocaleString()}]: Публикация с id = ${post_id} не найдена!`);
+        return;
+      }
+
+      response.status(200);
+      response.json(post);
+
+      console.log(`[${new Date().toLocaleString()}]: Данные публикации с id = ${post_id} получены!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   public update: RequestHandler = async (request, __) => {
