@@ -12,6 +12,7 @@ import Category from "../entities/Category.js";
  * Обрабатывает запросы, связанные с публикациями
  */
 export default class PostController implements Controller {
+  private _limit: number = 10;
   private _repository: Repository<Post>;
 
   public constructor(data_source: DataSource) {
@@ -101,8 +102,84 @@ export default class PostController implements Controller {
     }
   }
 
-  public get: RequestHandler = async (request, __) => {
+  /**
+   * Возвращает список публикаций с возможностью пагинации
+   * @params request
+   * @params response
+   */
+  public get: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: GET ${get_full_url(request)}`);
+
+    let query: any = {
+      select: {
+        post_id: true,
+        title: true,
+        author: {
+          user_id: true,
+          username: true,
+          email: true,
+        },
+        categories: {
+          category_id: true,
+          name: true,
+        },
+        comments: {
+          comment_id: true,
+          content: true,
+          author: {
+            user_id: true,
+            username: true,
+            email: true,
+          },
+          active: true,
+          created_at: true,
+          updated_at: true,
+        },
+        state: {
+          state_id: true,
+          name: true,
+        },
+        views: true,
+        created_at: true,
+        updated_at: true,
+      },
+      relations: {
+        author: true,
+        categories: true,
+        comments: {
+          author: true,
+        },
+        state: true,
+      },
+      order: {
+        created_at: "desc",
+      }
+    };
+
+    const page = parseInt(request.query.page as string);
+
+    if (page && page > 0) {
+      query.take = this._limit;
+      query.skip = this._limit * (page - 1);
+    }
+
+    try {
+      const posts: Post[] = await this._repository.find(query);
+
+      response.status(200);
+      response.json(posts);
+
+      console.log(`[${new Date().toLocaleString()}]: Публикации успешно получены!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   public get_one: RequestHandler = async (request, __) => {
