@@ -366,7 +366,54 @@ export default class PostController implements Controller {
     }
   }
 
-  public delete: RequestHandler = async (request, __) => {
+  /**
+   * Удаляет данные публикации
+   * @params request
+   * @params response
+   */
+  public delete: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: DELETE ${get_full_url(request)}`);
+
+    const post_id = parseInt(request.params.id as string);
+
+    if (!post_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор публикации!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор публикации!`);
+      return;
+    }
+
+    try {
+      const delete_result = await this._repository.delete(post_id);
+
+      if (delete_result.affected === 0) {
+        response.status(404);
+
+        response.json({
+          errors: [`Публикация с id = ${post_id} не найдена!`],
+        });
+
+        console.error(`[ERROR ${new Date().toLocaleString()}]: Публикация с id = ${post_id} не найдена!`);
+        return;
+      }
+
+      response.status(200);
+      response.json(delete_result);
+
+      console.log(`[${new Date().toLocaleString()}]: Удаление публикации с id = ${post_id} прошло успешно!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 }
