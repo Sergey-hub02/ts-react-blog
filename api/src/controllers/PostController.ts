@@ -277,8 +277,93 @@ export default class PostController implements Controller {
     }
   }
 
-  public update: RequestHandler = async (request, __) => {
+  /**
+   * Обновление данных указанной публикации
+   * @params request
+   * @params response
+   */
+  public update: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: PUT ${get_full_url(request)}`);
+
+    const post_id = parseInt(request.params.id as string);
+
+    if (!post_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор публикации!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор публикации!`);
+      return;
+    }
+
+    // проверка на существование публикации
+    const existing_post = await this._repository.findOne({
+      select: { post_id: true },
+      where: { post_id: post_id },
+    });
+
+    if (!existing_post) {
+      response.status(404);
+
+      response.json({
+        errors: [`Публикация с id = ${post_id} не найден!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Публикация с id = ${post_id} не найден!`);
+      return;
+    }
+
+    const post: Post = new Post();
+    post.post_id = post_id;
+
+    if (request.body.title && request.body.title.length !== 0) {
+      post.title = request.body.title;
+    }
+    if (request.body.content && request.body.content.length !== 0) {
+      post.content = request.body.content;
+    }
+    if (request.body.categories_ids && request.body.categories_ids.length !== 0) {
+      const categories: Category[] = request
+        .body
+        .categories_ids
+          .map((category_id: number) => {
+            const category: Category = new Category();
+            category.category_id = category_id;
+
+            return category;
+          });
+
+      post.categories = categories;
+    }
+    if (request.body.state_id) {
+      const state: State = new State();
+
+      state.state_id = request.body.state_id;
+      post.state = state;
+    }
+    if (request.body.views) {
+      post.views = parseInt(request.body.views as string);
+    }
+
+    try {
+      const updated_post = await this._repository.save(post);
+
+      response.status(200);
+      response.json(updated_post);
+
+      console.log(`[${new Date().toLocaleString()}]: Публикация с id = ${post_id} успешно обновлена!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   public delete: RequestHandler = async (request, __) => {
