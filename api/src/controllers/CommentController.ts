@@ -11,6 +11,7 @@ import Post from "../entities/Post.js";
  * Обрабатывает запросы, связанные с комментариями к публикациям
  */
 export default class CommentController implements Controller {
+  private _limit: number = 10;
   private _repository: Repository<Comment>;
 
   public constructor(data_source: DataSource) {
@@ -89,8 +90,66 @@ export default class CommentController implements Controller {
   public get: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: GET ${get_full_url(request)}`);
 
-    response.status(200);
-    response.json({ test: "test" });
+    let query: any = {
+      select: {
+        comment_id: true,
+        content: true,
+        author: {
+          user_id: true,
+          username: true,
+          email: true,
+        },
+        post: {
+          post_id: true,
+          title: true,
+        },
+        active: true,
+        created_at: true,
+        updated_at: true,
+      },
+      relations: {
+        author: true,
+        post: true,
+      },
+      order: {
+        created_at: "desc",
+      },
+    };
+
+    const page = parseInt(request.query.page as string);
+
+    if (page && page > 0) {
+      query.take = this._limit;
+      query.skip = this._limit * (page - 1);
+    }
+
+    const post_id = parseInt(request.query.post as string);
+
+    if (post_id && post_id > 0) {
+      query.where = {
+        post: {
+          post_id: post_id,
+        },
+      };
+    }
+
+    try {
+      const comments = await this._repository.find(query);
+
+      response.status(200);
+      response.json(comments);
+
+      console.log(`[${new Date().toLocaleString()}]: Комментарии получены!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   /**
