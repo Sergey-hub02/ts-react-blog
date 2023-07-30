@@ -235,8 +235,63 @@ export default class CommentController implements Controller {
   public update: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: PUT ${get_full_url(request)}`);
 
-    response.status(200);
-    response.json({ test: "test" });
+    const comment_id = parseInt(request.params.id as string);
+
+    if (!comment_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор комментария!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор комментария!`);
+      return;
+    }
+
+    // проверка на существование комментария
+    const existing_comment = await this._repository.findOne({
+      select: { comment_id: true },
+      where: { comment_id: comment_id },
+    });
+
+    if (!existing_comment) {
+      response.status(404);
+
+      response.json({
+        errors: [`Комментарий с id = ${comment_id} не найден!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Комментарий с id = ${comment_id} не найден!`);
+      return;
+    }
+
+    const comment = new Comment();
+    comment.comment_id = comment_id;
+
+    if (request.body.content && request.body.content.length !== 0) {
+      comment.content = request.body.content;
+    }
+    if (typeof request.body.active === "boolean") {
+      comment.active = request.body.active;
+    }
+
+    try {
+      const updated_comment = await this._repository.save(comment);
+
+      response.status(200);
+      response.json(updated_comment);
+
+      console.log(`[${new Date().toLocaleString()}]: Комментарий с id = ${comment_id} был успешно отредактирован!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 
   /**

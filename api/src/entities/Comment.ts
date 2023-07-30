@@ -4,9 +4,7 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToOne,
   ManyToOne,
-  JoinColumn,
 } from "typeorm";
 
 import User from "./User.js";
@@ -23,8 +21,7 @@ export default class Comment {
   @Column("text")
   public content: string;
 
-  @OneToOne(() => User)
-  @JoinColumn()
+  @ManyToOne(() => User)
   public author: User;
 
   @ManyToOne(() => Post, (post) => post.comments)
@@ -39,3 +36,4 @@ export default class Comment {
   @UpdateDateColumn()
   public updated_at: Date;
 }
+
