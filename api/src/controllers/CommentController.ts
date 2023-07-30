@@ -302,7 +302,46 @@ export default class CommentController implements Controller {
   public delete: RequestHandler = async (request, response) => {
     console.log(`[${new Date().toLocaleString()}]: DELETE ${get_full_url(request)}`);
 
-    response.status(200);
-    response.json({ test: "test" });
+    const comment_id = parseInt(request.params.id as string);
+
+    if (!comment_id) {
+      response.status(400);
+
+      response.json({
+        errors: [`Некорректный идентификатор комментария!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Некорректный идентификатор комментария!`);
+      return;
+    }
+
+    try {
+      const delete_result = await this._repository.delete(comment_id);
+
+      if (delete_result.affected === 0) {
+        response.status(404);
+
+        response.json({
+          errors: [`Комменатрий с id = ${comment_id} не найден!`],
+        });
+
+        console.error(`[ERROR ${new Date().toLocaleString()}]: Комментарий с id = ${comment_id} не найден!`);
+        return;
+      }
+
+      response.status(200);
+      response.json(delete_result);
+
+      console.log(`[${new Date().toLocaleString()}]: Комментарий с id = ${comment_id} был успешно удалён!`);
+    }
+    catch (error) {
+      response.status(500);
+
+      response.json({
+        errors: [error.message],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
+    }
   }
 }
