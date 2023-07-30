@@ -55,7 +55,7 @@ export default class UserController implements Controller {
     if (existing_users.length !== 0) {
       errors.push(`Имя ${request.body.username} уже занято! Пожалуйста, выберите другое имя!`);
     }
-    if (request.body.password.length < 6) {
+    if (request.body.password && request.body.password.length < 6) {
       errors.push("Пароль должен содержать не менее 6 символов!");
     }
 
@@ -359,5 +359,92 @@ export default class UserController implements Controller {
 
       console.error(`[ERROR ${new Date().toLocaleString()}]: ${error.message}`);
     }
+  }
+
+  /**
+   * Выполняет авторизацию пользователя
+   * @param request
+   * @param response
+   */
+  public login: RequestHandler = async (request, response) => {
+    console.log(`[${new Date().toLocaleString()}]: POST ${get_full_url(request)}`);
+
+    /*========== ВАЛИДАЦИЯ ДАННЫХ ==========*/
+    const errors: string[] = [];
+
+    if (!request.body.username_or_email || request.body.username_or_email.length === 0) {
+      errors.push("Не заполнено поле \"Имя пользователя или email\"!");
+    }
+    if (!request.body.password || request.body.password.length === 0) {
+      errors.push("Не заполнено поле \"Пароль\"!");
+    }
+
+    if (errors.length !== 0) {
+      response.status(400);
+
+      response.json({
+        errors: errors,
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: ${errors}`);
+      return;
+    }
+
+    /*========== АВТОРИЗАЦИЯ ==========*/
+    const username_or_email: string = request.body.username_or_email;
+    const password: string = request.body.password;
+
+    const search_field: string = (username_or_email.includes("@")) ? "email" : "username";
+
+    const found_user = await this._repository.findOne({
+      select: {
+        user_id: true,
+        firstname: true,
+        lastname: true,
+        username: true,
+        email: true,
+        roles: {
+          role_id: true,
+          name: true,
+        },
+        created_at: true,
+        updated_at: true,
+      },
+      relations: {
+        roles: true,
+      },
+      where: {
+        [search_field]: username_or_email,
+      }
+    });
+
+    if (!found_user) {
+      response.status(401);
+
+      response.json({
+        errors: [`Пользователя с именем или email ${username_or_email} не существует!`],
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Пользователя с именем или email ${username_or_email} не существует!`);
+      return;
+    }
+
+    const verification_result: boolean = await argon2.verify(found_user.password, password);
+
+    if (!verification_result) {
+      response.status(401);
+
+      response.json({
+        errors: "Неверный пароль! Попробуйте ещё раз!",
+      });
+
+      console.error(`[ERROR ${new Date().toLocaleString()}]: Неверный пароль!`);
+      return;
+    }
+
+    response.status(200);
+    response.json(found_user);
+
+    console.log(`[${new Date().toLocaleString()}]: Авторизация прошла успешно!`);
   }
 }
