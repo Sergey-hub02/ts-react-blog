@@ -153,7 +153,10 @@ export default class PostController implements Controller {
       },
       order: {
         created_at: "desc",
-      }
+        comments: {
+          created_at: "desc",
+        },
+      },
     };
 
     const page = parseInt(request.query.page as string);
@@ -247,6 +250,11 @@ export default class PostController implements Controller {
             author: true,
           },
           state: true,
+        },
+        order: {
+          comments: {
+            created_at: "desc",
+          },
         },
       });
 
